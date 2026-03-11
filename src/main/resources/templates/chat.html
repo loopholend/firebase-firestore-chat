@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<a href="/home" class="floating-back" aria-label="Back to home">
+    &larr;
+</a>
+<div class="page chat-page chat-wrapper">
+    <div class="chat-shell card">
+        <div class="chat-header">
+            <div class="stack">
+                <h1 th:if="${recipient != null}" th:text="|Chat with ${recipient.username}|">Chat</h1>
+                <h1 th:if="${recipient == null}">Chat</h1>
+            </div>
+            <button id="themeToggle" class="ghost-button theme-toggle" type="button">Theme</button>
+        </div>
+
+        <div class="chat-scroll">
+            <p class="error" th:if="${error}" th:text="${error}"></p>
+            <div class="chat-container" th:if="${conversation != null}">
+                <div class="chat-empty" th:if="${#lists.isEmpty(conversation)}">No messages yet.</div>
+                <div class="message"
+                     th:each="message : ${conversation}"
+                     th:classappend="${message.senderId == currentUser.id} ? ' outgoing' : ' incoming'">
+                    <div class="bubble">
+                        <div class="bubble-user"
+                             th:text="${message.senderId == currentUser.id ? currentUser.username : recipient.username}">User</div>
+                        <div class="bubble-text" th:text="${message.text}">Message text</div>
+                        <div class="bubble-time"
+                             th:text="${#dates.format(new java.util.Date(message.timestamp), 'hh:mm a')}">10:30 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form id="messageForm" th:action="@{/sendMessage}" th:object="${messageForm}" method="post" class="chat-input">
+            <input type="hidden" th:field="*{receiverId}" th:value="${recipient != null ? recipient.id : ''}">
+            <textarea th:field="*{text}" placeholder="Type your message" required></textarea>
+            <button type="submit">Send Message</button>
+        </form>
+    </div>
+</div>
+<script th:src="@{/js/theme.js}"></script>
+<script>
+    (function () {
+        const textarea = document.querySelector('#messageForm textarea');
+        const form = document.getElementById('messageForm');
+        if (!textarea || !form) {
+            return;
+        }
+
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    })();
+</script>
+</body>
+</html>

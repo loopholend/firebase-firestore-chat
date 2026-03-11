@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="page">
+    <div class="header">
+        <div>
+            <h1 th:text="'Welcome, ' + ${currentUser.username}">Welcome</h1>
+            <p class="muted">Search for users or continue existing conversations.</p>
+        </div>
+        <div class="card-header">
+            <button id="themeToggle" class="ghost-button theme-toggle" type="button">Theme</button>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card users-card">
+        <h2>Users</h2>
+        <input type="text" id="userSearch" class="search-input" placeholder="Search users">
+        <div class="muted search-hint">Only users with an existing conversation are shown by default.</div>
+        <div id="userList">
+            <div class="muted" th:if="${#lists.isEmpty(users)}">No conversation contacts yet.</div>
+            <div class="user-row" th:each="user : ${users}">
+                <div class="user-meta">
+                    <div class="user-name-row">
+                        <strong th:text="${user.username}">Username</strong>
+                        <span class="unread-dot" th:if="${unreadUserIds != null and unreadUserIds.contains(user.id)}"></span>
+                    </div>
+                    <div class="muted" th:text="${user.email}">email</div>
+                </div>
+                <a class="button" th:href="@{/chat/{userId}(userId=${user.id})}">Message</a>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:src="@{/js/theme.js}"></script>
+<script>
+    (function () {
+        const searchInput = document.getElementById('userSearch');
+        const userList = document.getElementById('userList');
+        const initialMarkup = userList.innerHTML;
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function renderUsers(users) {
+            if (!users.length) {
+                userList.innerHTML = '<div class="muted">No matching users found.</div>';
+                return;
+            }
+
+            userList.innerHTML = users.map(function (user) {
+                const unreadDot = user.hasUnread ? '<span class="unread-dot"></span>' : '';
+                return `
+                    <div class="user-row">
+                        <div class="user-meta">
+                            <div class="user-name-row">
+                                <strong>${escapeHtml(user.username)}</strong>
+                                ${unreadDot}
+                            </div>
+                            <div class="muted">${escapeHtml(user.email)}</div>
+                        </div>
+                        <a class="button" href="/chat/${encodeURIComponent(user.id)}">Message</a>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        searchInput.addEventListener('input', async function () {
+            const query = searchInput.value.trim();
+            if (!query) {
+                userList.innerHTML = initialMarkup;
+                return;
+            }
+
+            const response = await fetch(`/users/search?q=${encodeURIComponent(query)}`);
+            if (!response.ok) {
+                return;
+            }
+            const users = await response.json();
+            renderUsers(users);
+        });
+    })();
+</script>
+</body>
+</html>
