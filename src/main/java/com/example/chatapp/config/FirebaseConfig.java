@@ -5,9 +5,10 @@ import com.google.cloud.firestore.Firestore;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.cloud.FirestoreClient;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import org.springframework.beans.factory.annotation.Value;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
@@ -15,16 +16,22 @@ import org.springframework.util.StringUtils;
 @Configuration
 public class FirebaseConfig {
 
-    private static final String DEFAULT_SERVICE_ACCOUNT_PATH =
-            "C:\\Users\\Pranjal Pal\\Downloads\\chat-app-1e086-firebase-adminsdk-fbsvc-7dce8e839d.json";
-
     @Bean
-    public Firestore firestore(@Value("${firebase.credentials.path:}") String credentialsPath) throws IOException {
-        String resolvedPath = StringUtils.hasText(credentialsPath) ? credentialsPath : DEFAULT_SERVICE_ACCOUNT_PATH;
+    public Firestore firestore() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) {
-            try (FileInputStream serviceAccount = new FileInputStream(resolvedPath)) {
+            InputStream classpathResource = FirebaseConfig.class.getClassLoader()
+                    .getResourceAsStream("firebase-key.json");
+            InputStream serviceAccount = classpathResource;
+            if (classpathResource == null) {
+                String firebaseKeyJson = System.getenv("FIREBASE_KEY_JSON");
+                if (!StringUtils.hasText(firebaseKeyJson)) {
+                    throw new IllegalStateException("firebase-key.json was not found on the classpath and FIREBASE_KEY_JSON is not set.");
+                }
+                serviceAccount = new ByteArrayInputStream(firebaseKeyJson.getBytes(StandardCharsets.UTF_8));
+            }
+            try (InputStream stream = serviceAccount) {
                 FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                        .setCredentials(GoogleCredentials.fromStream(stream))
                         .build();
                 FirebaseApp.initializeApp(options);
             }
