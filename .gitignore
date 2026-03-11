@@ -3,3 +3,4 @@ node_modules/
 *.log
 .env
 src/main/resources/firebase-key.json
+*.json
